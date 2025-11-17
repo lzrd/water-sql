@@ -18,7 +18,6 @@ jobs:
       matrix:
         state:
           - name: washington
-          - name: illinois
         # Add more states here as you create them:
         # - name: oregon
 
