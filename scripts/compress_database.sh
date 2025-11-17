@@ -9,6 +9,11 @@ STATE="${1:-washington}"
 DB_FILE="build/${STATE}_water.db"
 COMPRESSED_FILE="build/${STATE}_water.db.xz"
 
+if [ -f "$COMPRESSED_FILE" ]; then
+    echo "Compressed database $COMPRESSED_FILE already exists. Skipping compression."
+    exit 0
+fi
+
 if [ ! -f "$DB_FILE" ]; then
     echo "Error: Database not found: $DB_FILE"
     echo "Run the parser first to create the database."

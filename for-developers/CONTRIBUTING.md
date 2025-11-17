@@ -68,10 +68,31 @@ cd water-sql
 
 # Install Python dependencies
 pip install -r src/Python_Scripts/requirements.txt
-
-# Test the build system (requires existing database)
-./build.sh washington 1.2.1
 ```
+
+### Building and Testing
+
+To build a state package and verify it, use the following `make` commands:
+
+1.  **Clean previous builds:**
+    ```bash
+    make clean
+    ```
+    This removes any old build artifacts, output directories, and database files.
+
+2.  **Build the state database and package:**
+    ```bash
+    make STATE_NAME=washington STATE_CODE=WA
+    ```
+    This command will download the state data (if needed), parse it, import it into a SQLite database, compress the database, and build the student distribution package.
+
+3.  **Test the generated package:**
+    ```bash
+    make test-package STATE_NAME=washington STATE_CODE=WA STATE_CODE=WA
+    ```
+    This command extracts the package, installs Python requirements, and runs the analysis script to verify functionality.
+
+    Replace `washington` and `WA` with the desired state name and code.
 
 ### Project Structure
 

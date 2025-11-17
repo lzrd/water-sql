@@ -11,9 +11,13 @@
 #   DB=washington     - Database/state name (default: washington)
 #   PORT=8000         - Server port (default: 8000)
 
-VERSION ?= 1.3.3
-DB ?= washington
+VERSION := $(shell cat VERSION.txt)
+STATE_NAME ?= washington
+STATE_CODE ?= WA
 PORT ?= 8000
+
+# Capitalize STATE_NAME for EPA download
+CAPITALIZED_STATE_NAME := $(shell echo $(STATE_NAME) | awk '{print toupper(substr($$0,1,1)) tolower(substr($$0,2))}')
 
 # Directories
 BUILD_DIR = build/package
@@ -39,15 +43,23 @@ HTML_FILES = $(BUILD_DIR)/README.html \
              $(BUILD_DIR)/Documentation/WATER_DATA.html \
              $(BUILD_DIR)/Documentation/TIME_CODES.html
 
-.PHONY: all build html serve clean help
+.PHONY: all build html serve clean help prepare-state-db bump-version
 
 # Default target
-all: build
+all: prepare-state-db build
+
+# Bump the patch version in VERSION.txt
+bump-version:
+	@echo "Bumping patch version..."
+	@CURRENT_VERSION=$$(cat VERSION.txt)
+	@NEW_VERSION=$$(echo $$CURRENT_VERSION | awk -F. '{$$NF++; print $$1"."$$2"."$$3}')
+	@echo "$$NEW_VERSION" > VERSION.txt
+	@echo "Version bumped from $$CURRENT_VERSION to $$NEW_VERSION"
 
 # Build the complete package
 build:
-	@echo "Building package: $(DB) version $(VERSION)"
-	./build.sh $(DB) $(VERSION)
+	@echo "Building package: $(STATE_NAME) version $(VERSION)"
+	./build.sh $(STATE_NAME) $(VERSION)
 
 # Convert markdown to HTML (for quick iteration)
 html: $(HTML_FILES)
@@ -99,8 +111,21 @@ serve: html
 clean:
 	@echo "Cleaning build artifacts..."
 	rm -rf build/package
+	rm -rf build/output_*
 	rm -f dist/*.zip dist/*.tar.gz
+	rm -f build/*.db build/*.db.xz
 	@echo "✓ Clean complete"
+
+# Download, parse, and prepare a state database
+prepare-state-db:
+	@echo "Preparing state database for $(STATE_NAME) ($(STATE_CODE))..."
+	./scripts/download_state_data.sh $(STATE_NAME)
+	@echo "Extracting data to data/$(STATE_NAME)..."
+	@mkdir -p data/$(STATE_NAME)
+	unzip -o data/storet/$(CAPITALIZED_STATE_NAME).zip -d data/$(STATE_NAME)
+	python3 src/parse_state_data.py data/$(STATE_NAME) -s $(STATE_CODE) -n $(STATE_NAME) -o build/output_$(STATE_NAME)
+	cd build/output_$(STATE_NAME) && ./import_to_sqlite.sh && cd ../..
+	./scripts/compress_database.sh $(STATE_NAME)
 
 # Show help
 help:
@@ -129,9 +154,30 @@ help:
 	@echo "  make serve PORT=8080           # Serve docs on port 8080"
 	@echo "  make html                      # Just convert MD to HTML"
 	@echo "  make clean                     # Clean build directory"
-	@echo ""
-	@echo "Quick iteration workflow:"
-	@echo "  1. Edit src/templates/QUICKSTART.md"
-	@echo "  2. make html                   # Convert to HTML"
-	@echo "  3. make serve                  # Start server (in another terminal)"
-	@echo "  4. Student refreshes browser to see changes"
+	@echo "  make test-package              # Test the generated student package"
+
+# Test the generated student package
+test-package: build
+	@echo "\n========================================"
+	@echo "Testing student package: $(STATE_NAME) v$(VERSION)"
+	@echo "========================================"
+	@TEMP_DIR=/tmp/water-sql-test-$(shell date +%s) && \
+	mkdir -p $$TEMP_DIR && \
+	echo "  → Extracting package to $$TEMP_DIR..." && \
+	unzip -q dist/$(STATE_NAME)_water_data_v$(VERSION).zip -d $$TEMP_DIR && \
+	echo "  → Running Python analysis script..." && \
+	cd $$TEMP_DIR/package/Python_Scripts && \
+	pip install -r requirements.txt > /dev/null 2>&1 && \
+	SQLITE_DB_NAME="$(STATE_NAME)_water.db" python3 analyze_water_quality_sqlite.py && \
+	if [ $$? -eq 0 ]; then \
+	  echo "  ✓ Python analysis script ran successfully."; \
+	else \
+	  echo "  ✗ Python analysis script failed."; \
+	  exit 1; \
+	fi && \
+	cd ../../.. && \
+	echo "  → Cleaning up temporary directory..." && \
+	rm -rf $$TEMP_DIR && \
+	echo "✓ Package test complete!"
+
+Quick iteration workflow:

@@ -18,16 +18,17 @@ jobs:
       matrix:
         state:
           - name: washington
-            version: "1.3.3"
           - name: illinois
-            version: "1.0"
         # Add more states here as you create them:
         # - name: oregon
-        #   version: "1.0"
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Get version from VERSION.txt
+        id: get_version
+        run: echo "VERSION=$(cat VERSION.txt)" >> $GITHUB_OUTPUT
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -49,13 +50,13 @@ jobs:
 
       - name: Build package
         run: |
-          ./build.sh ${{ matrix.state.name }} ${{ matrix.state.version }}
+          ./build.sh ${{ matrix.state.name }} ${{ steps.get_version.outputs.VERSION }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.state.name }}_package
-          path: dist/${{ matrix.state.name }}_water_data_v${{ matrix.state.version }}.zip
+          path: dist/${{ matrix.state.name }}_water_data_v${{ steps.get_version.outputs.VERSION }}.zip
           retention-days: 30
 
   create-release:
@@ -66,6 +67,19 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Get version from VERSION.txt
+        id: get_version
+        run: echo "VERSION=$(cat VERSION.txt)" >> $GITHUB_OUTPUT
+
+      - name: Check for duplicate release tag
+        id: check_tag
+        run: |
+          TAG_NAME="v${{ steps.get_version.outputs.VERSION }}"
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Error: Release tag $TAG_NAME already exists. Aborting release."
+            exit 1
+          fi
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -78,8 +92,8 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ github.run_number }}
-          name: Water Quality Data Packages - Build ${{ github.run_number }}
+          tag_name: v${{ steps.get_version.outputs.VERSION }}
+          name: Water Quality Data Packages - v${{ steps.get_version.outputs.VERSION }}
           body: |
             # Water Quality Educational Packages
 

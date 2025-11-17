@@ -20,21 +20,23 @@ Database file:
     Run this script from the package root, not from Python_Scripts/
 """
 
+import sys
+import warnings
+import os
+import matplotlib
+matplotlib.use('Agg') # Use non-interactive backend for headless environments
 import sqlite3
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from datetime import datetime
-import sys
-import warnings
-import os
 
 # Suppress pandas warnings
 warnings.filterwarnings('ignore', category=UserWarning, module='pandas')
 warnings.filterwarnings('ignore', category=FutureWarning, module='pandas')
 
 # Database configuration
-SQLITE_DB = 'washington_water.db'
+SQLITE_DB = os.path.join('..', os.environ.get('SQLITE_DB_NAME', 'washington_water.db'))
 
 
 def verify_schema(conn):

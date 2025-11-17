@@ -15,24 +15,23 @@ This guide explains how to add EPA STORET water quality data for Oregon, Califor
 
 ## Quick Start
 
-If you already have EPA STORET data files for a state, here's the fastest path:
+If you want to add a new state, here's the fastest path using the `Makefile`:
 
 ```bash
-# 1. Organize your data
-mkdir -p data/Oregon
+# 1. Clean any previous build artifacts
+make clean
 
-# 2. Parse the data
-python3 src/parse_state_data.py data/Oregon -s OR -n Oregon -o build/output_oregon
+# 2. Prepare the state database (downloads, parses, imports, compresses)
+#    Replace 'oregon' and 'OR' with your desired state name and code.
+make prepare-state-db STATE_NAME=oregon STATE_CODE=OR
 
-# 3. Create SQLite database
-cd build/output_oregon
-./import_to_sqlite.sh
+# 3. Build the student package
+make build STATE_NAME=oregon
 
-# 4. Build student package
-cd ../..
-./build.sh oregon 1.0
+# 4. Test the generated package
+make test-package STATE_NAME=oregon STATE_CODE=OR
 
-# Done! Package is at: dist/oregon_water_data_v1.0.tar.gz
+# Done! Package is at: dist/oregon_water_data_v<VERSION>.zip
 ```
 
 ---
@@ -304,40 +303,38 @@ python3 analyze_water_quality_sqlite.py
 
 ### Step 6: Build Student Package
 
-Update `build.sh` to recognize the new state (see [Updating build.sh](#updating-buildsh) below), then:
+Once the database is prepared, build the student package using the `make build` command:
 
 ```bash
-./build.sh oregon 1.0
+# From the project root directory
+make build STATE_NAME=oregon
 ```
 
-**Output**: `dist/oregon_water_data_v1.0.tar.gz`
+**What this does**:
+1. Copies the compressed database, documentation, and Python scripts into a temporary package directory.
+2. Converts Markdown documentation to HTML.
+3. Generates sample visualizations.
+4. Creates a `MANIFEST.txt` file.
+5. Archives the package into a `.zip` file in the `dist/` directory.
+
+**Output**: `dist/oregon_water_data_v<VERSION>.zip` (replace `<VERSION>` with the current project version).
 
 ### Step 7: Test the Package
 
+After building, it's crucial to test the generated package to ensure everything works as expected for students:
+
 ```bash
-# Extract to temporary location
-mkdir -p /tmp/test_oregon
-cd /tmp/test_oregon
-tar -xzf ~/path/to/dist/oregon_water_data_v1.0.tar.gz
-
-# Verify contents
-cd package
-ls -lh
-# Should show:
-#   oregon_water.db (or washington_water.db - depends on build.sh)
-#   README.html
-#   INSTALL.html
-#   Python_Scripts/
-#   Documentation/
-#   Sample_Output/
-
-# Test Python scripts
-cd Python_Scripts
-pip install -r requirements.txt
-python3 analyze_water_quality_sqlite.py
-
-# Success! You should see three PNG files generated.
+# From the project root directory
+make test-package STATE_NAME=oregon STATE_CODE=OR
 ```
+
+**What this does**:
+1. Extracts the `.zip` package to a temporary location.
+2. Installs Python dependencies required by the analysis scripts.
+3. Runs the main Python analysis script (`analyze_water_quality_sqlite.py`) to verify its functionality and visualization generation.
+4. Cleans up the temporary test directory.
+
+**Expected output**: A success message if the script runs without errors, indicating the package is ready for distribution.
 
 ---
 

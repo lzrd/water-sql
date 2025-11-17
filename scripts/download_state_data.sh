@@ -6,6 +6,7 @@
 set -e  # Exit on error
 
 STATE_NAME="$1"
+CAPITALIZED_STATE_NAME="$(echo "${STATE_NAME:0:1}" | tr '[:lower:]' '[:upper:]')${STATE_NAME:1}"
 
 if [ -z "$STATE_NAME" ]; then
     echo "Usage: $0 <STATE_NAME>"
@@ -20,8 +21,8 @@ fi
 mkdir -p data/storet
 
 # Download the state data
-EPA_URL="https://gaftp.epa.gov/Storet/exports/${STATE_NAME}.zip"
-OUTPUT_FILE="data/storet/${STATE_NAME}.zip"
+EPA_URL="https://gaftp.epa.gov/Storet/exports/${CAPITALIZED_STATE_NAME}.zip"
+OUTPUT_FILE="data/storet/${CAPITALIZED_STATE_NAME}.zip"
 
 echo "========================================"
 echo "Downloading EPA STORET data for ${STATE_NAME}"

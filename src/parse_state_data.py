@@ -95,6 +95,7 @@ class StateDataParser:
         # Look for files matching {STATE}_*_inv.txt
         pattern = f'{self.state_abbr}_*_inv.txt'
         inv_files = list(self.data_dir.glob(pattern))
+        print(f"  Found {len(inv_files)} inventory files matching {pattern}")
 
         if not inv_files:
             print(f"  Warning: No inventory files found matching {pattern}")
@@ -138,6 +139,7 @@ class StateDataParser:
         # Look for files matching {STATE}_*/{STATE}_*_sta_*.txt
         pattern = f'{self.state_abbr}_*/{self.state_abbr}_*_sta_*.txt'
         sta_files = list(self.data_dir.glob(pattern))
+        print(f"  Found {len(sta_files)} station files matching {pattern}")
 
         if not sta_files:
             print(f"  Warning: No station files found matching {pattern}")
@@ -188,6 +190,7 @@ class StateDataParser:
         # Look for files matching {STATE}_*/{STATE}_*_res_*.txt
         pattern = f'{self.state_abbr}_*/{self.state_abbr}_*_res_*.txt'
         res_files = list(self.data_dir.glob(pattern))
+        print(f"  Found {len(res_files)} result files matching {pattern}")
 
         if not res_files:
             print(f"  Warning: No result files found matching {pattern}")
@@ -353,14 +356,13 @@ if [ ! -f "parameters.csv" ] || [ ! -f "stations.csv" ] || [ ! -f "results.csv" 
     exit 1
 fi
 
-# Remove old database if it exists
-if [ -f "$DB_FILE" ]; then
-    echo "Removing existing database: $DB_FILE"
-    rm "$DB_FILE"
-fi
+        # Check if database already exists
+        if [ -f "$DB_FILE" ]; then
+            echo "Database $DB_FILE already exists. Skipping import."
+            exit 0
+        fi
 
-# Create schema
-echo ""
+        # Create schemaecho ""
 echo "[1/4] Creating database schema..."
 sqlite3 "$DB_FILE" < schema.sql
 echo "  ✓ Schema created"
@@ -390,7 +392,20 @@ echo ""
 echo "[4/4] Importing results (this may take several minutes)..."
 sqlite3 "$DB_FILE" <<'EOF'
 .mode csv
-.import --skip 1 results.csv results
+CREATE TEMPORARY TABLE temp_results (
+    agency TEXT,
+    station_id TEXT,
+    param_code TEXT,
+    start_date TEXT,
+    start_time TEXT,
+    result_value TEXT,
+    huc TEXT,
+    sample_depth TEXT
+);
+.import --skip 1 results.csv temp_results
+INSERT INTO results (agency, station_id, param_code, start_date, start_time, result_value, huc, sample_depth)
+SELECT agency, station_id, param_code, start_date, start_time, result_value, huc, sample_depth FROM temp_results;
+DROP TABLE temp_results;
 EOF
 COUNT=$(sqlite3 "$DB_FILE" "SELECT COUNT(*) FROM results;")
 echo "  ✓ Imported $COUNT results"
@@ -428,6 +443,18 @@ echo ""
 
     def run(self, output_dir='output'):
         """Run the complete parsing process."""
+        output_path = Path(output_dir)
+        param_file = output_path / 'parameters.csv'
+        station_file = output_path / 'stations.csv'
+        result_file = output_path / 'results.csv'
+
+        if param_file.exists() and station_file.exists() and result_file.exists():
+            print(f"Output CSV files already exist in {output_dir}. Skipping parsing.")
+            # Still write schema and import script, as they might be needed even if CSVs exist
+            self.write_sqlite_schema(output_dir)
+            self.write_import_script(output_dir)
+            return
+
         print("=" * 70)
         print(f"EPA STORET Data Parser - {self.state_name}")
         print("=" * 70)
@@ -492,12 +519,15 @@ Output:
     args = parser.parse_args()
 
     # Validate data directory exists
-    if not Path(args.data_dir).exists():
-        print(f"ERROR: Data directory not found: {args.data_dir}")
+    base_data_dir = Path(args.data_dir)
+    actual_data_dir = base_data_dir / args.state_name.capitalize()
+
+    if not actual_data_dir.exists():
+        print(f"ERROR: Data directory not found: {actual_data_dir}")
         sys.exit(1)
 
     # Run parser
-    state_parser = StateDataParser(args.data_dir, args.state_abbr, args.state_name)
+    state_parser = StateDataParser(actual_data_dir, args.state_abbr, args.state_name)
     state_parser.run(args.output)
 
 

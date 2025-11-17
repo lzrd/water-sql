@@ -5,8 +5,15 @@
 set -e  # Exit on error
 
 STATE="${1:-washington}"
-VERSION="${2:-1.2.1}"
+DEFAULT_VERSION=$(cat VERSION.txt)
+VERSION="${2:-${DEFAULT_VERSION}}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+# Append Git short hash for PR builds
+if [[ -n "$GITHUB_REF" && "$GITHUB_REF" == "refs/pull/"* ]]; then
+    SHORT_SHA=$(echo "$GITHUB_SHA" | cut -c1-7)
+    VERSION="${VERSION}-$$SHORT_SHA"
+fi
 
 echo "======================================================================="
 echo "Building Water Quality Student Package"
@@ -37,8 +44,8 @@ if [ ! -f "build/${STATE}_water.db" ]; then
     fi
 fi
 
-cp "build/${STATE}_water.db" build/package/washington_water.db
-DB_SIZE=$(stat -c %s build/package/washington_water.db | numfmt --to=iec-i --suffix=B)
+cp "build/${STATE}_water.db" "build/package/${STATE}_water.db"
+DB_SIZE=$(stat -c %s "build/package/${STATE}_water.db" | numfmt --to=iec-i --suffix=B)
 echo "  ✓ Database: $DB_SIZE"
 
 # Step 3: SQL.js (SKIPPED - browser console removed in v1.3)
@@ -64,6 +71,7 @@ cp for-students/example_queries.sql build/package/
 # Copy index.html and sample.sqliterc from src/templates (build-specific files)
 if [ -f "src/templates/index.html" ]; then
     cp src/templates/index.html build/package/
+    sed -i "s|<!-- VERSION_PLACEHOLDER -->|${VERSION}|g" build/package/index.html
 fi
 if [ -f "src/templates/sample.sqliterc" ]; then
     cp src/templates/sample.sqliterc build/package/
@@ -126,7 +134,7 @@ Package Contents:
 -----------------
 
 Root Level:
-  - washington_water.db (SQLite database, 371 MB)
+  - ${STATE}_water.db (SQLite database, 371 MB)
   - index.html (landing page - start here!)
   - README.md / README.html
   - QUICKSTART.md / QUICKSTART.html (15-minute quick start)
