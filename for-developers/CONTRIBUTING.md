@@ -57,8 +57,32 @@ Found a bug or have a suggestion? [Open an issue](https://github.com/your-repo/i
 
 - Python 3.7+
 - Git
+- Git LFS (Large File Storage)
 - sqlite3 command-line tool
 - For building: bash, tar, gzip
+
+### Git LFS Installation
+
+Git LFS is required to handle large database files. Install it for your operating system:
+
+**Debian/Ubuntu:**
+```bash
+sudo apt-get update
+sudo apt-get install git-lfs
+git lfs install
+```
+
+**Fedora:**
+```bash
+sudo dnf install git-lfs
+git lfs install
+```
+
+After installation, ensure Git LFS is tracking the database files:
+```bash
+git lfs track "build/*.db.xz"
+git add .gitattributes build/washington_water.db.xz
+```
 
 ### Clone and Setup
 
