@@ -1,0 +1,28 @@
+# Auto-detect text files and normalize line endings to LF in repository
+* text=auto
+
+# Shell scripts must use LF (required for Linux/macOS/Git Bash/WSL)
+*.sh text eol=lf
+# Python scripts use LF (works on all platforms, best practice)
+*.py text eol=lf
+# Markdown and documentation use LF
+*.md text eol=lf
+# SQL files use LF
+*.sql text eol=lf
+# Configuration files use LF
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.txt text eol=lf
+Makefile text eol=lf
+# Binary files - do not normalize
+*.db binary
+*.xz binary
+*.zip binary
+*.tar.gz binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+build/*.db.xz filter=lfs diff=lfs merge=lfs -text

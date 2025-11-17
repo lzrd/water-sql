@@ -1,0 +1,46 @@
+# Build artifacts (temporary)
+build/package/
+build/output*/
+dist/*
+
+# Uncompressed databases (generated from .db.xz)
+build/*.db
+*.db
+
+# Commit message helper files
+commit_*.txt
+
+# Raw STORET data downloads (can be re-downloaded)
+data/storet/*.zip
+data/Washington/
+data/Illinois/
+data/*/
+
+# Legacy
+washington_water_data.old/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+*.egg-info/
+
+# Generated files
+*.html
+*.png
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace

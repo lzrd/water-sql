@@ -1,0 +1,137 @@
+name: Build and Release State Packages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'build/*.db.xz'           # Trigger when compressed databases change
+      - 'src/**'                  # Or when source code changes
+      - '.github/workflows/release.yml'
+  workflow_dispatch:             # Allow manual trigger
+
+jobs:
+  build-packages:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        state:
+          - name: washington
+            version: "1.3.3"
+          - name: illinois
+            version: "1.0"
+        # Add more states here as you create them:
+        # - name: oregon
+        #   version: "1.0"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install markdown
+
+      - name: Install xz-utils
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xz-utils
+
+      - name: Decompress database
+        run: |
+          ./scripts/decompress_database.sh ${{ matrix.state.name }}
+
+      - name: Build package
+        run: |
+          ./build.sh ${{ matrix.state.name }} ${{ matrix.state.version }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.state.name }}_package
+          path: dist/${{ matrix.state.name }}_water_data_v${{ matrix.state.version }}.zip
+          retention-days: 30
+
+  create-release:
+    needs: build-packages
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+
+      - name: Display structure
+        run: ls -R dist/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ github.run_number }}
+          name: Water Quality Data Packages - Build ${{ github.run_number }}
+          body: |
+            # Water Quality Educational Packages
+
+            Automated build from commit: ${{ github.sha }}
+
+            ## Available States
+
+            ### Washington State
+            - **3.1+ million** measurements from 6,892 stations
+            - SQLite database (371 MB uncompressed)
+            - Complete educational package with tutorials
+
+            ### Illinois
+            - Full EPA STORET dataset
+            - SQLite database with analysis scripts
+            - Same structure as Washington package
+
+            ## What's Included
+
+            Each package contains:
+            - SQLite database (ready to use, no server needed)
+            - Python analysis scripts with visualizations
+            - Interactive HTML documentation
+            - SQL query examples
+            - Quick start guide (15-20 minutes)
+            - Spatial analysis tutorial with maps
+            - Interview preparation materials
+
+            ## Quick Start
+
+            1. Download the zip file for your state
+            2. Extract the archive
+            3. Open `index.html` in your browser
+            4. Follow the Quick Start guide
+
+            ## For Teachers
+
+            Want to create a package for your state?
+
+            1. Clone this repository
+            2. Run: `./scripts/build_state_package.sh YourState ST 1.0`
+            3. Share the generated zip file with students
+
+            See [docs/ADDING_STATES.md](https://github.com/${{ github.repository }}/blob/main/docs/ADDING_STATES.md) for details.
+
+            ---
+
+            Built: ${{ github.event.head_commit.timestamp }}
+            Commit: ${{ github.event.head_commit.message }}
+          files: |
+            dist/**/*.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

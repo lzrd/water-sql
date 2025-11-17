@@ -1,0 +1,39 @@
+-- SQLite configuration file
+-- Copy this to your home directory as .sqliterc
+-- Windows: C:\Users\YourName\.sqliterc
+-- macOS/Linux: ~/.sqliterc
+
+-- Nice formatting
+.mode column
+.headers on
+.timer on
+
+-- Optional: Show more columns before wrapping
+.width 12 20 15 15
+
+-- Welcome message
+.print "✓ SQLite settings loaded!"
+.print "  - Column mode enabled"
+.print "  - Headers enabled"
+.print "  - Query timer enabled"
+.print ""
+.print "Quick tips:"
+.print "  .tables          - List all tables"
+.print "  .schema TABLE    - Show table structure"
+.print "  .read FILE.sql   - Run SQL from file"
+.print "  .help            - See all commands"
+.print ""
+
+-- Useful queries as comments (uncomment to use):
+-- Find a parameter:
+-- SELECT code, long_name FROM parameters WHERE long_name LIKE '%turbidity%';
+
+-- Count measurements by county:
+-- SELECT county, COUNT(*) as count FROM results JOIN stations USING(station_id) GROUP BY county ORDER BY count DESC LIMIT 10;
+
+-- Export to CSV:
+-- .mode csv
+-- .output mydata.csv
+-- SELECT * FROM results LIMIT 100;
+-- .output stdout
+-- .mode column
